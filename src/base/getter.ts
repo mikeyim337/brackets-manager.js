@@ -1,5 +1,5 @@
 import { Storage } from '../types';
-import { Group, Match, MatchGame, Round, SeedOrdering, Stage, StageType } from 'brackets-model';
+import { Group, Match, MatchGame, Round, SeedOrdering, Stage, StageType, Id } from 'brackets-model';
 import { BracketKind, RoundPositionalInfo } from '../types';
 import { Create } from '../create';
 import * as helpers from '../helpers';
@@ -36,7 +36,7 @@ export class BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    private async getOrderedRoundsSingleElimination(stageId: number): Promise<Round[]> {
+    private async getOrderedRoundsSingleElimination(stageId: Id): Promise<Round[]> {
         return [await this.getUpperBracketFirstRound(stageId)];
     }
 
@@ -45,7 +45,7 @@ export class BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    private async getOrderedRoundsDoubleElimination(stageId: number): Promise<Round[]> {
+    private async getOrderedRoundsDoubleElimination(stageId: Id): Promise<Round[]> {
         // Getting all rounds instead of cherry-picking them is the least expensive.
         const rounds = await this.storage.select('round', { stage_id: stageId });
         if (!rounds) throw Error('Error getting rounds.');
@@ -66,7 +66,7 @@ export class BaseGetter {
      *
      * @param roundId ID of the round.
      */
-    protected async getRoundPositionalInfo(roundId: number): Promise<RoundPositionalInfo> {
+    protected async getRoundPositionalInfo(roundId: Id): Promise<RoundPositionalInfo> {
         const round = await this.storage.select('round', roundId);
         if (!round) throw Error('Round not found.');
 
@@ -172,7 +172,7 @@ export class BaseGetter {
      * @param winnerBracketId ID of the winner bracket.
      * @param roundNumberWB The number of the previous round in the winner bracket.
      */
-    private async getMatchesBeforeFirstRoundLB(match: Match, winnerBracketId: number, roundNumberWB: number): Promise<Match[]> {
+    private async getMatchesBeforeFirstRoundLB(match: Match, winnerBracketId: Id, roundNumberWB: number): Promise<Match[]> {
         return [
             await this.findMatch(winnerBracketId, roundNumberWB, helpers.getOriginPosition(match, 'opponent1')),
             await this.findMatch(winnerBracketId, roundNumberWB, helpers.getOriginPosition(match, 'opponent2')),
@@ -187,7 +187,7 @@ export class BaseGetter {
      * @param roundNumber Number of the current round.
      * @param roundNumberWB The number of the previous round in the winner bracket.
      */
-    private async getMatchesBeforeMinorRoundLB(match: Match, winnerBracketId: number, roundNumber: number, roundNumberWB: number): Promise<Match[]> {
+    private async getMatchesBeforeMinorRoundLB(match: Match, winnerBracketId: Id, roundNumber: number, roundNumberWB: number): Promise<Match[]> {
         const matchNumber = helpers.getOriginPosition(match, 'opponent1');
 
         return [
@@ -372,7 +372,7 @@ export class BaseGetter {
      * @param stageId ID of the stage.
      * @param stageType The type of the stage.
      */
-    protected async getSeedingMatches(stageId: number, stageType: StageType): Promise<Match[] | null> {
+    protected async getSeedingMatches(stageId: Id, stageType: StageType): Promise<Match[] | null> {
         if (stageType === 'round_robin')
             return this.storage.select('match', { stage_id: stageId });
 
@@ -385,7 +385,7 @@ export class BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    private async getUpperBracketFirstRound(stageId: number): Promise<Round> {
+    private async getUpperBracketFirstRound(stageId: Id): Promise<Round> {
         // Considering the database is ordered, this round will always be the first round of the upper bracket.
         const firstRound = await this.storage.selectFirst('round', { stage_id: stageId, number: 1 });
         if (!firstRound) throw Error('Round not found.');
@@ -397,7 +397,7 @@ export class BaseGetter {
      *
      * @param groupId ID of the group.
      */
-    private async getLastRound(groupId: number): Promise<Round> {
+    private async getLastRound(groupId: Id): Promise<Round> {
         const round = await this.storage.selectLast('round', { group_id: groupId });
         if (!round) throw Error('Error getting rounds.');
         return round;
@@ -409,7 +409,7 @@ export class BaseGetter {
      * @param stageId ID of the stage.
      * @param stageType Type of the stage.
      */
-    private async getFinalGroupId(stageId: number, stageType: StageType): Promise<number | null> {
+    private async getFinalGroupId(stageId: Id, stageType: StageType): Promise<Id | null> {
         const groupNumber = stageType === 'single_elimination' ? 2 /* Consolation final */ : 3 /* Grand final */;
         const finalGroup = await this.storage.selectFirst('group', { stage_id: stageId, number: groupNumber });
         if (!finalGroup) return null;
@@ -421,7 +421,7 @@ export class BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    protected async getUpperBracket(stageId: number): Promise<Group> {
+    protected async getUpperBracket(stageId: Id): Promise<Group> {
         const winnerBracket = await this.storage.selectFirst('group', { stage_id: stageId, number: 1 });
         if (!winnerBracket) throw Error('Winner bracket not found.');
         return winnerBracket;
@@ -432,7 +432,7 @@ export class BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    protected async getLoserBracket(stageId: number): Promise<Group | null> {
+    protected async getLoserBracket(stageId: Id): Promise<Group | null> {
         return this.storage.selectFirst('group', { stage_id: stageId, number: 2 });
     }
 
@@ -445,7 +445,7 @@ export class BaseGetter {
      * @param roundNumber Number of the round in its parent group.
      * @param matchNumber Number of the match in its parent round.
      */
-    private async getDiagonalMatch(groupId: number, roundNumber: number, matchNumber: number): Promise<Match> {
+    private async getDiagonalMatch(groupId: Id, roundNumber: number, matchNumber: number): Promise<Match> {
         return this.findMatch(groupId, roundNumber + 1, helpers.getDiagonalMatchNumber(matchNumber));
     }
 
@@ -458,7 +458,7 @@ export class BaseGetter {
      * @param roundNumber Number of the round in its parent group.
      * @param matchNumber Number of the match in its parent round.
      */
-    private async getParallelMatch(groupId: number, roundNumber: number, matchNumber: number): Promise<Match> {
+    private async getParallelMatch(groupId: Id, roundNumber: number, matchNumber: number): Promise<Match> {
         return this.findMatch(groupId, roundNumber + 1, matchNumber);
     }
 
@@ -471,7 +471,7 @@ export class BaseGetter {
      * @param roundNumber Number of the round in its parent group.
      * @param matchNumber Number of the match in its parent round.
      */
-    protected async findMatch(groupId: number, roundNumber: number, matchNumber: number): Promise<Match> {
+    protected async findMatch(groupId: Id, roundNumber: number, matchNumber: number): Promise<Match> {
         const round = await this.storage.selectFirst('round', {
             group_id: groupId,
             number: roundNumber,

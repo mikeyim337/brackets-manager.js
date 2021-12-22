@@ -1,4 +1,4 @@
-import { Group, Match, MatchGame } from 'brackets-model';
+import { Group, Id, Match, MatchGame } from 'brackets-model';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
 
@@ -9,7 +9,7 @@ export class Find extends BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    public async upperBracket(stageId: number): Promise<Group> {
+    public async upperBracket(stageId: Id): Promise<Group> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -29,7 +29,7 @@ export class Find extends BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    public async loserBracket(stageId: number): Promise<Group> {
+    public async loserBracket(stageId: Id): Promise<Group> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -52,7 +52,7 @@ export class Find extends BaseGetter {
      * 
      * @param matchId ID of the target match.
      */
-    public async previousMatches(matchId: number): Promise<Match[]> {
+    public async previousMatches(matchId: Id): Promise<Match[]> {
         const match = await this.storage.select('match', matchId);
         if (!match) throw Error('Match not found.');
 
@@ -75,7 +75,7 @@ export class Find extends BaseGetter {
      * 
      * @param matchId ID of the target match.
      */
-    public async nextMatches(matchId: number): Promise<Match[]> {
+    public async nextMatches(matchId: Id): Promise<Match[]> {
         const match = await this.storage.select('match', matchId);
         if (!match) throw Error('Match not found.');
 
@@ -101,7 +101,7 @@ export class Find extends BaseGetter {
      * @param roundNumber Number of the round in its parent group.
      * @param matchNumber Number of the match in its parent round.
      */
-    public async match(groupId: number, roundNumber: number, matchNumber: number): Promise<Match> {
+    public async match(groupId: Id, roundNumber: number, matchNumber: number): Promise<Match> {
         return this.findMatch(groupId, roundNumber, matchNumber);
     }
 

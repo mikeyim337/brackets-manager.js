@@ -1,4 +1,4 @@
-import { Match, MatchGame, Round, Seeding, SeedOrdering, Status } from 'brackets-model';
+import { Id, Match, MatchGame, Round, Seeding, SeedOrdering, Status } from 'brackets-model';
 import { ordering } from './ordering';
 import { BaseUpdater } from './base/updater';
 import { ChildCountLevel } from './types';
@@ -50,7 +50,7 @@ export class Update extends BaseUpdater {
      * @param stageId ID of the stage.
      * @param seedOrdering A list of ordering methods.
      */
-    public async ordering(stageId: number, seedOrdering: SeedOrdering[]): Promise<void> {
+    public async ordering(stageId: Id, seedOrdering: SeedOrdering[]): Promise<void> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -70,7 +70,7 @@ export class Update extends BaseUpdater {
      * @param roundId ID of the round.
      * @param method Seed ordering method.
      */
-    public async roundOrdering(roundId: number, method: SeedOrdering): Promise<void> {
+    public async roundOrdering(roundId: Id, method: SeedOrdering): Promise<void> {
         const round = await this.storage.select('round', roundId);
         if (!round) throw Error('This round does not exist.');
 
@@ -116,7 +116,7 @@ export class Update extends BaseUpdater {
      * @param stageId ID of the stage.
      * @param seeding The new seeding.
      */
-    public async seeding(stageId: number, seeding: Seeding): Promise<void> {
+    public async seeding(stageId: Id, seeding: Seeding): Promise<void> {
         await this.updateSeeding(stageId, seeding);
     }
 
@@ -154,7 +154,7 @@ export class Update extends BaseUpdater {
      * @param stageId ID of the stage.
      * @param childCount The target child count.
      */
-    private async updateStageMatchChildCount(stageId: number, childCount: number): Promise<void> {
+    private async updateStageMatchChildCount(stageId: Id, childCount: number): Promise<void> {
         if (!await this.storage.update('match', { stage_id: stageId }, { child_count: childCount }))
             throw Error('Could not update the match.');
 
@@ -171,7 +171,7 @@ export class Update extends BaseUpdater {
      * @param groupId ID of the group.
      * @param childCount The target child count.
      */
-    private async updateGroupMatchChildCount(groupId: number, childCount: number): Promise<void> {
+    private async updateGroupMatchChildCount(groupId: Id, childCount: number): Promise<void> {
         if (!await this.storage.update('match', { group_id: groupId }, { child_count: childCount }))
             throw Error('Could not update the match.');
 
@@ -188,7 +188,7 @@ export class Update extends BaseUpdater {
      * @param roundId ID of the round.
      * @param childCount The target child count.
      */
-    private async updateRoundMatchChildCount(roundId: number, childCount: number): Promise<void> {
+    private async updateRoundMatchChildCount(roundId: Id, childCount: number): Promise<void> {
         if (!await this.storage.update('match', { round_id: roundId }, { child_count: childCount }))
             throw Error('Could not update the match.');
 

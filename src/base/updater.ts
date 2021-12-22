@@ -1,4 +1,4 @@
-import { Match, MatchGame, Seeding, Stage, Status } from 'brackets-model';
+import { Id, Match, MatchGame, Seeding, Stage, Status } from 'brackets-model';
 import { BracketKind, ParticipantSlot, Side } from '../types';
 import { SetNextOpponent } from '../helpers';
 import { ordering } from '../ordering';
@@ -14,7 +14,7 @@ export class BaseUpdater extends BaseGetter {
      * @param stageId ID of the stage.
      * @param seeding A new seeding or null to reset the existing seeding.
      */
-    protected async updateSeeding(stageId: number, seeding: Seeding | null): Promise<void> {
+    protected async updateSeeding(stageId: Id, seeding: Seeding | null): Promise<void> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -49,7 +49,7 @@ export class BaseUpdater extends BaseGetter {
      * 
      * @param parentId ID of the parent match.
      */
-    protected async updateParentMatch(parentId: number): Promise<void> {
+    protected async updateParentMatch(parentId: Id): Promise<void> {
         const storedParent = await this.storage.select('match', parentId);
         if (!storedParent) throw Error('Parent not found.');
 

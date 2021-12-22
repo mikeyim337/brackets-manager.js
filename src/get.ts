@@ -1,4 +1,4 @@
-import { Stage, Group, Round, Match, MatchGame, Participant } from 'brackets-model';
+import { Stage, Group, Round, Match, MatchGame, Participant, Id } from 'brackets-model';
 import { Database, FinalStandingsItem, ParticipantSlot } from './types';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
@@ -10,7 +10,7 @@ export class Get extends BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    public async stageData(stageId: number): Promise<Database> {
+    public async stageData(stageId: Id): Promise<Database> {
         const stageData = await this.getStageSpecificData(stageId);
 
         const participants = await this.storage.select('participant', { tournament_id: stageData.stage.tournament_id });
@@ -31,7 +31,7 @@ export class Get extends BaseGetter {
      *
      * @param tournamentId ID of the tournament.
      */
-    public async tournamentData(tournamentId: number): Promise<Database> {
+    public async tournamentData(tournamentId: Id): Promise<Database> {
         const stages = await this.storage.select('stage', { tournament_id: tournamentId });
         if (!stages) throw Error('Error getting stages.');
 
@@ -69,7 +69,7 @@ export class Get extends BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    public async seeding(stageId: number): Promise<ParticipantSlot[]> {
+    public async seeding(stageId: Id): Promise<ParticipantSlot[]> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -84,7 +84,7 @@ export class Get extends BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    public async finalStandings(stageId: number): Promise<FinalStandingsItem[]> {
+    public async finalStandings(stageId: Id): Promise<FinalStandingsItem[]> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -147,7 +147,7 @@ export class Get extends BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    private async singleEliminationStandings(stageId: number): Promise<FinalStandingsItem[]> {
+    private async singleEliminationStandings(stageId: Id): Promise<FinalStandingsItem[]> {
         const grouped: Participant[][] = [];
 
         const { stage: stages, group: groups, match: matches, participant: participants } = await this.stageData(stageId);
@@ -182,7 +182,7 @@ export class Get extends BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    private async doubleEliminationStandings(stageId: number): Promise<FinalStandingsItem[]> {
+    private async doubleEliminationStandings(stageId: Id): Promise<FinalStandingsItem[]> {
         const grouped: Participant[][] = [];
 
         const { stage: stages, group: groups, match: matches, participant: participants } = await this.stageData(stageId);
@@ -225,7 +225,7 @@ export class Get extends BaseGetter {
      * 
      * @param stageId ID of the stage.
      */
-    private async getStageSpecificData(stageId: number): Promise<{
+    private async getStageSpecificData(stageId: Id): Promise<{
         stage: Stage;
         groups: Group[];
         rounds: Round[];
