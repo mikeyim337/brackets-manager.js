@@ -1,6 +1,7 @@
-import { Group, InputStage, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage } from 'brackets-model';
+/* eslint-disable quotes */
+import { Group, Match, MatchGame, Round, Participant, SeedOrdering, Stage } from 'brackets-model';
 import { defaultMinorOrdering, ordering } from './ordering';
-import { Duel, Storage, OmitId, ParticipantSlot, StandardBracketResults } from './types';
+import { Duel, Storage, OmitId, ParticipantSlot, StandardBracketResults, CustomSeeding, CustomParticipant, CustomInputStage } from './types';
 import { BracketsManager } from '.';
 import * as helpers from './helpers';
 
@@ -10,15 +11,14 @@ import * as helpers from './helpers';
  * @param this Instance of BracketsManager.
  * @param stage The stage to create.
  */
-export async function create(this: BracketsManager, stage: InputStage): Promise<void> {
+export async function create(this: BracketsManager, stage: CustomInputStage): Promise<void> {
     const instance = new Create(this.storage, stage);
     await instance.run();
 }
 
 export class Create {
-
     private storage: Storage;
-    private stage: InputStage;
+    private stage: CustomInputStage;
     private readonly seedOrdering: SeedOrdering[];
     private updateMode: boolean;
     private enableByesInUpdate: boolean;
@@ -30,7 +30,7 @@ export class Create {
      * @param storage The implementation of Storage.
      * @param stage The stage to create.
      */
-    constructor(storage: Storage, stage: InputStage) {
+    constructor(storage: Storage, stage: CustomInputStage) {
         this.storage = storage;
         this.stage = stage;
         this.stage.settings = this.stage.settings || {};
@@ -38,20 +38,15 @@ export class Create {
         this.updateMode = false;
         this.enableByesInUpdate = false;
 
-        if (!this.stage.name)
-            throw Error('You must provide a name for the stage.');
+        if (!this.stage.name) throw Error('You must provide a name for the stage.');
 
-        if (!Number.isInteger(this.stage.tournamentId))
-            throw Error('You must provide a tournament id for the stage.');
+        if (!Number.isInteger(this.stage.tournamentId)) throw Error('You must provide a tournament id for the stage.');
 
-        if (stage.type === 'round_robin')
-            this.stage.settings.roundRobinMode = this.stage.settings.roundRobinMode || 'simple';
+        if (stage.type === 'round_robin') this.stage.settings.roundRobinMode = this.stage.settings.roundRobinMode || 'simple';
 
-        if (stage.type === 'single_elimination')
-            this.stage.settings.consolationFinal = this.stage.settings.consolationFinal || false;
+        if (stage.type === 'single_elimination') this.stage.settings.consolationFinal = this.stage.settings.consolationFinal || false;
 
-        if (stage.type === 'double_elimination')
-            this.stage.settings.grandFinal = this.stage.settings.grandFinal || 'none';
+        if (stage.type === 'double_elimination') this.stage.settings.grandFinal = this.stage.settings.grandFinal || 'none';
 
         this.stage.settings.matchesChildCount = this.stage.settings.matchesChildCount || 0;
     }
@@ -76,15 +71,14 @@ export class Create {
                 throw Error('Unknown stage type.');
         }
 
-        if (stageId === -1)
-            throw Error('Something went wrong when creating the stage.');
+        if (stageId === -1) throw Error('Something went wrong when creating the stage.');
 
         await this.ensureSeedOrdering(stageId);
     }
 
     /**
      * Enables the update mode.
-     * 
+     *
      * @param stageId ID of the stage.
      * @param enableByes Whether to use BYEs or TBDs for `null` values in an input seeding.
      */
@@ -103,8 +97,7 @@ export class Create {
         const groups = await this.getRoundRobinGroups();
         const stageId = await this.createStage();
 
-        for (let i = 0; i < groups.length; i++)
-            await this.createRoundRobinGroup(stageId, i + 1, groups[i]);
+        for (let i = 0; i < groups.length; i++) await this.createRoundRobinGroup(stageId, i + 1, groups[i]);
 
         return stageId;
     }
@@ -115,8 +108,7 @@ export class Create {
      * One bracket and optionally a consolation final between semi-final losers.
      */
     private async singleElimination(): Promise<number> {
-        if (Array.isArray(this.stage.settings?.seedOrdering) &&
-            this.stage.settings?.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
+        if (Array.isArray(this.stage.settings?.seedOrdering) && this.stage.settings?.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
         const slots = await this.getSlots();
         const stageId = await this.createStage();
@@ -136,16 +128,14 @@ export class Create {
      * between the winner of both bracket, which can be simple or double.
      */
     private async doubleElimination(): Promise<number> {
-        if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
-            this.stage.settings.seedOrdering.length < 1) throw Error('You must specify at least one seed ordering method.');
+        if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) && this.stage.settings.seedOrdering.length < 1) throw Error('You must specify at least one seed ordering method.');
 
         const slots = await this.getSlots();
         const stageId = await this.createStage();
         const method = this.getStandardBracketFirstRoundOrdering();
         const ordered = ordering[method](slots);
 
-        if (this.stage.settings?.skipFirstRound)
-            return this.createDoubleEliminationSkipFirstRound(stageId, ordered);
+        if (this.stage.settings?.skipFirstRound) return this.createDoubleEliminationSkipFirstRound(stageId, ordered);
 
         return this.createDoubleElimination(stageId, ordered);
     }
@@ -200,13 +190,11 @@ export class Create {
             number,
         });
 
-        if (groupId === -1)
-            throw Error('Could not insert the group.');
+        if (groupId === -1) throw Error('Could not insert the group.');
 
         const rounds = helpers.makeRoundRobinMatches(slots, this.stage.settings?.roundRobinMode!);
 
-        for (let i = 0; i < rounds.length; i++)
-            await this.createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i]);
+        for (let i = 0; i < rounds.length; i++) await this.createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i]);
     }
 
     /**
@@ -225,8 +213,7 @@ export class Create {
             number,
         });
 
-        if (groupId === -1)
-            throw Error('Could not insert the group.');
+        if (groupId === -1) throw Error('Could not insert the group.');
 
         let duels = helpers.makePairs(slots);
         let roundNumber = 1;
@@ -267,8 +254,7 @@ export class Create {
             number,
         });
 
-        if (groupId === -1)
-            throw Error('Could not insert the group.');
+        if (groupId === -1) throw Error('Could not insert the group.');
 
         let duels = helpers.makePairs(ordered);
         let roundNumber = 1;
@@ -302,11 +288,9 @@ export class Create {
             number,
         });
 
-        if (groupId === -1)
-            throw Error('Could not insert the group.');
+        if (groupId === -1) throw Error('Could not insert the group.');
 
-        for (let i = 0; i < duels.length; i++)
-            await this.createRound(stageId, groupId, i + 1, 1, [duels[i]]);
+        for (let i = 0; i < duels.length; i++) await this.createRound(stageId, groupId, i + 1, 1, [duels[i]]);
     }
 
     /**
@@ -327,11 +311,9 @@ export class Create {
             group_id: groupId,
         });
 
-        if (roundId === -1)
-            throw Error('Could not insert the round.');
+        if (roundId === -1) throw Error('Could not insert the round.');
 
-        for (let i = 0; i < matchCount; i++)
-            await this.createMatch(stageId, groupId, roundId, i + 1, duels[i], matchesChildCount);
+        for (let i = 0; i < matchCount; i++) await this.createMatch(stageId, groupId, roundId, i + 1, duels[i], matchesChildCount);
     }
 
     /**
@@ -352,8 +334,7 @@ export class Create {
         const opponent2 = helpers.toResultWithPosition(opponents[1]);
 
         // Round-robin matches can easily be removed. Prevent BYE vs. BYE matches.
-        if (this.stage.type === 'round_robin' && opponent1 === null && opponent2 === null)
-            return;
+        if (this.stage.type === 'round_robin' && opponent1 === null && opponent2 === null) return;
 
         let existing: Match | null = null;
         let status = helpers.getMatchStatus(opponents);
@@ -370,24 +351,26 @@ export class Create {
             if (existing) {
                 // Keep the most advanced status when updating a match.
                 const existingStatus = helpers.getMatchStatus(existing);
-                if (existingStatus > status)
-                    status = existingStatus;
+                if (existingStatus > status) status = existingStatus;
             }
         }
 
-        const parentId = await this.insertMatch({
-            number: matchNumber,
-            stage_id: stageId,
-            group_id: groupId,
-            round_id: roundId,
-            child_count: childCount,
-            status: status,
-            opponent1,
-            opponent2,
-        }, existing);
+        const parentId = await this.insertMatch(
+            {
+                number: matchNumber,
+                stage_id: stageId,
+                group_id: groupId,
+                round_id: roundId,
+                child_count: childCount,
+                status: status,
+                opponent1,
+                opponent2,
+            },
+            // eslint-disable-next-line comma-dangle
+            existing
+        );
 
-        if (parentId === -1)
-            throw Error('Could not insert the match.');
+        if (parentId === -1) throw Error('Could not insert the match.');
 
         for (let i = 0; i < childCount; i++) {
             const id = await this.insertMatchGame({
@@ -399,8 +382,7 @@ export class Create {
                 opponent2: helpers.toResult(opponents[1]),
             });
 
-            if (id === -1)
-                throw Error('Could not insert the match game.');
+            if (id === -1) throw Error('Could not insert the match game.');
         }
     }
 
@@ -468,8 +450,12 @@ export class Create {
         const size = this.stage.settings?.size || this.stage.seeding?.length || 0;
         helpers.ensureValidSize(size);
 
-        if (size && !this.stage.seeding)
-            return Array.from(Array(size), (_: ParticipantSlot, i) => ({ id: null, position: i + 1 }));
+        if (size && !this.stage.seeding) {
+            return Array.from(Array(size), (_: ParticipantSlot, i) => ({
+                id: null,
+                position: i + 1,
+            }));
+        }
 
         if (!this.stage.seeding) throw Error('Either size or seeding must be given.');
 
@@ -479,13 +465,12 @@ export class Create {
         };
 
         helpers.ensureNoDuplicates(this.stage.seeding);
+
         this.stage.seeding = helpers.fixSeeding(this.stage.seeding, size);
 
-        if (this.stage.type !== 'round_robin' && this.stage.settings.balanceByes)
-            this.stage.seeding = helpers.balanceByes(this.stage.seeding, this.stage.settings.size);
+        if (this.stage.type !== 'round_robin' && this.stage.settings.balanceByes) this.stage.seeding = helpers.balanceByes(this.stage.seeding, this.stage.settings.size);
 
-        if (helpers.isSeedingWithIds(this.stage.seeding))
-            return this.getSlotsUsingIds(this.stage.seeding, positions);
+        if (helpers.isSeedingWithIds(this.stage.seeding)) return this.getSlotsUsingIds(this.stage.seeding, positions);
 
         return this.getSlotsUsingNames(this.stage.seeding, positions);
     }
@@ -496,14 +481,15 @@ export class Create {
      * @param seeding The seeding (names).
      * @param positions An optional list of positions (seeds) for a manual ordering.
      */
-    private async getSlotsUsingNames(seeding: Seeding, positions?: number[]): Promise<ParticipantSlot[]> {
+    private async getSlotsUsingNames(seeding: CustomSeeding, positions?: number[]): Promise<ParticipantSlot[]> {
         const participants = helpers.extractParticipantsFromSeeding(this.stage.tournamentId, seeding);
 
-        if (!await this.registerParticipants(participants))
-            throw Error('Error registering the participants.');
+        if (!(await this.registerParticipants(participants))) throw Error('Error registering the participants.');
 
         // Get participants back with IDs.
-        const added = await this.storage.select('participant', { tournament_id: this.stage.tournamentId });
+        const added = await this.storage.select('participant', {
+            tournament_id: this.stage.tournamentId,
+        });
         if (!added) throw Error('Error getting registered participant.');
 
         return helpers.mapParticipantsNamesToDatabase(seeding, added, positions);
@@ -515,8 +501,10 @@ export class Create {
      * @param seeding The seeding (IDs).
      * @param positions An optional list of positions (seeds) for a manual ordering.
      */
-    private async getSlotsUsingIds(seeding: Seeding, positions?: number[]): Promise<ParticipantSlot[]> {
-        const participants = await this.storage.select('participant', { tournament_id: this.stage.tournamentId });
+    private async getSlotsUsingIds(seeding: CustomSeeding, positions?: number[]): Promise<ParticipantSlot[]> {
+        const participants = await this.storage.select('participant', {
+            tournament_id: this.stage.tournamentId,
+        });
         if (!participants) throw Error('No available participants.');
 
         return helpers.mapParticipantsIdsToDatabase(seeding, participants, positions);
@@ -526,12 +514,13 @@ export class Create {
      * Gets the current stage number based on existing stages.
      */
     private async getStageNumber(): Promise<number> {
-        const stages = await this.storage.select('stage', { tournament_id: this.stage.tournamentId });
+        const stages = await this.storage.select('stage', {
+            tournament_id: this.stage.tournamentId,
+        });
         const stageNumbers = stages?.map(stage => stage.number);
 
         if (this.stage.number !== undefined) {
-            if (stageNumbers?.includes(this.stage.number))
-                throw Error('The given stage number already exists.');
+            if (stageNumbers?.includes(this.stage.number)) throw Error('The given stage number already exists.');
 
             return this.stage.number;
         }
@@ -546,8 +535,7 @@ export class Create {
      * Safely gets `matchesChildCount` in the stage input settings.
      */
     private getMatchesChildCount(): number {
-        if (!this.stage.settings?.matchesChildCount)
-            return 0;
+        if (!this.stage.settings?.matchesChildCount) return 0;
 
         return this.stage.settings.matchesChildCount;
     }
@@ -571,11 +559,9 @@ export class Create {
             return defaultMethod;
         }
 
-        if (stageType === 'elimination' && method.match(/^groups\./))
-            throw Error('You must specify a seed ordering method without a \'groups\' prefix');
+        if (stageType === 'elimination' && method.match(/^groups\./)) throw Error("You must specify a seed ordering method without a 'groups' prefix");
 
-        if (stageType === 'groups' && method !== 'natural' && !method.match(/^groups\./))
-            throw Error('You must specify a seed ordering method with a \'groups\' prefix');
+        if (stageType === 'groups' && method !== 'natural' && !method.match(/^groups\./)) throw Error("You must specify a seed ordering method with a 'groups' prefix");
 
         return method;
     }
@@ -584,15 +570,12 @@ export class Create {
      * Gets the duels in groups for a round-robin stage.
      */
     private async getRoundRobinGroups(): Promise<ParticipantSlot[][]> {
-        if (this.stage.settings?.groupCount === undefined || !Number.isInteger(this.stage.settings.groupCount))
-            throw Error('You must specify a group count for round-robin stages.');
+        if (this.stage.settings?.groupCount === undefined || !Number.isInteger(this.stage.settings.groupCount)) throw Error('You must specify a group count for round-robin stages.');
 
-        if (this.stage.settings.groupCount <= 0)
-            throw Error('You must provide a strictly positive group count.');
+        if (this.stage.settings.groupCount <= 0) throw Error('You must provide a strictly positive group count.');
 
         if (this.stage.settings?.manualOrdering) {
-            if (this.stage.settings?.manualOrdering.length !== this.stage.settings?.groupCount)
-                throw Error('Group count in the manual ordering does not correspond to the given group count.');
+            if (this.stage.settings?.manualOrdering.length !== this.stage.settings?.groupCount) throw Error('Group count in the manual ordering does not correspond to the given group count.');
 
             const positions = this.stage.settings?.manualOrdering.flat();
             const slots = await this.getSlots(positions);
@@ -600,8 +583,7 @@ export class Create {
             return helpers.makeGroups(slots, this.stage.settings.groupCount);
         }
 
-        if (Array.isArray(this.stage.settings.seedOrdering) && this.stage.settings.seedOrdering.length !== 1)
-            throw Error('You must specify one seed ordering method.');
+        if (Array.isArray(this.stage.settings.seedOrdering) && this.stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
         const method = this.getRoundRobinOrdering();
         const slots = await this.getSlots();
@@ -641,8 +623,7 @@ export class Create {
      */
     private getMinorOrdering(participantCount: number, index: number, minorRoundCount: number): SeedOrdering | undefined {
         // No ordering for the last minor round. There is only one participant to order.
-        if (index === minorRoundCount - 1)
-            return undefined;
+        if (index === minorRoundCount - 1) return undefined;
 
         return this.getOrdering(2 + index, 'elimination', defaultMinorOrdering[participantCount]?.[1 + index] || 'natural');
     }
@@ -655,11 +636,9 @@ export class Create {
     private async insertStage(stage: OmitId<Stage>): Promise<number> {
         let existing: Stage | null = null;
 
-        if (this.updateMode)
-            existing = await this.storage.select('stage', this.currentStageId);
+        if (this.updateMode) existing = await this.storage.select('stage', this.currentStageId);
 
-        if (!existing)
-            return this.storage.insert('stage', stage);
+        if (!existing) return this.storage.insert('stage', stage);
 
         return existing.id;
     }
@@ -679,8 +658,7 @@ export class Create {
             });
         }
 
-        if (!existing)
-            return this.storage.insert('group', group);
+        if (!existing) return this.storage.insert('group', group);
 
         return existing.id;
     }
@@ -700,8 +678,7 @@ export class Create {
             });
         }
 
-        if (!existing)
-            return this.storage.insert('round', round);
+        if (!existing) return this.storage.insert('round', round);
 
         return existing.id;
     }
@@ -713,12 +690,10 @@ export class Create {
      * @param existing An existing match corresponding to the current one.
      */
     private async insertMatch(match: OmitId<Match>, existing: Match | null): Promise<number> {
-        if (!existing)
-            return this.storage.insert('match', match);
+        if (!existing) return this.storage.insert('match', match);
 
         const updated = helpers.getUpdatedMatchResults(match, existing, this.enableByesInUpdate) as Match;
-        if (!await this.storage.update('match', existing.id, updated))
-            throw Error('Could not update the match.');
+        if (!(await this.storage.update('match', existing.id, updated))) throw Error('Could not update the match.');
 
         return existing.id;
     }
@@ -738,12 +713,10 @@ export class Create {
             });
         }
 
-        if (!existing)
-            return this.storage.insert('match_game', matchGame);
+        if (!existing) return this.storage.insert('match_game', matchGame);
 
         const updated = helpers.getUpdatedMatchResults(matchGame, existing, this.enableByesInUpdate) as MatchGame;
-        if (!await this.storage.update('match_game', existing.id, updated))
-            throw Error('Could not update the match game.');
+        if (!(await this.storage.update('match_game', existing.id, updated))) throw Error('Could not update the match game.');
 
         return existing.id;
     }
@@ -753,17 +726,17 @@ export class Create {
      *
      * @param participants The list of participants to process.
      */
-    private async registerParticipants(participants: OmitId<Participant>[]): Promise<boolean> {
-        const existing = await this.storage.select('participant', { tournament_id: this.stage.tournamentId });
+    private async registerParticipants(participants: OmitId<CustomParticipant | Participant>[]): Promise<boolean> {
+        const existing = await this.storage.select('participant', {
+            tournament_id: this.stage.tournamentId,
+        });
 
         // Insert all if nothing.
-        if (!existing || existing.length === 0)
-            return this.storage.insert('participant', participants);
+        if (!existing || existing.length === 0) return this.storage.insert('participant', participants);
 
         // Insert only missing otherwise.
         for (const participant of participants) {
-            if (existing.some(value => value.name === participant.name))
-                continue;
+            if (existing.some(value => value.name === participant.name)) continue;
 
             const result = await this.storage.insert('participant', participant);
             if (result === -1) return false;
@@ -786,8 +759,7 @@ export class Create {
             settings: this.stage.settings || {},
         });
 
-        if (stageId === -1)
-            throw Error('Could not insert the stage.');
+        if (stageId === -1) throw Error('Could not insert the stage.');
 
         return stageId;
     }
@@ -821,8 +793,7 @@ export class Create {
         const finalDuels: Duel[] = [[winnerWb, winnerLb]];
 
         // Second duel.
-        if (grandFinal === 'double')
-            finalDuels.push([{ id: null }, { id: null }]);
+        if (grandFinal === 'double') finalDuels.push([{ id: null }, { id: null }]);
 
         await this.createUniqueMatchBracket(stageId, 3, finalDuels);
     }
@@ -843,7 +814,6 @@ export class Create {
             seedOrdering: this.seedOrdering,
         };
 
-        if (!await this.storage.update('stage', stageId, stage))
-            throw Error('Could not update the stage.');
+        if (!(await this.storage.update('stage', stageId, stage))) throw Error('Could not update the stage.');
     }
 }

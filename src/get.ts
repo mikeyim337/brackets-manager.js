@@ -1,10 +1,10 @@
+/* eslint-disable comma-dangle */
 import { Stage, Group, Round, Match, MatchGame, Participant } from 'brackets-model';
 import { Database, FinalStandingsItem, ParticipantSlot } from './types';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
 
 export class Get extends BaseGetter {
-
     /**
      * Returns the data needed to display a stage.
      *
@@ -14,6 +14,7 @@ export class Get extends BaseGetter {
         const stageData = await this.getStageSpecificData(stageId);
 
         const participants = await this.storage.select('participant', { tournament_id: stageData.stage.tournament_id });
+
         if (!participants) throw Error('Error getting participants.');
 
         return {
@@ -73,8 +74,7 @@ export class Get extends BaseGetter {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
-        if (stage.type === 'round_robin')
-            return this.roundRobinSeeding(stage);
+        if (stage.type === 'round_robin') return this.roundRobinSeeding(stage);
 
         return this.eliminationSeeding(stage);
     }
@@ -106,8 +106,7 @@ export class Get extends BaseGetter {
      * @param stage The stage.
      */
     private async roundRobinSeeding(stage: Stage): Promise<ParticipantSlot[]> {
-        if (stage.settings.size === undefined)
-            throw Error('The size of the seeding is undefined.');
+        if (stage.settings.size === undefined) throw Error('The size of the seeding is undefined.');
 
         const matches = await this.storage.select('match', { stage_id: stage.id });
         if (!matches) throw Error('Error getting matches.');
@@ -118,8 +117,7 @@ export class Get extends BaseGetter {
         // when the stage is created. We need to add them back temporarily.
         if (slots.length < stage.settings.size) {
             const diff = stage.settings.size - slots.length;
-            for (let i = 0; i < diff; i++)
-                slots.push(null);
+            for (let i = 0; i < diff; i++) slots.push(null);
         }
 
         const unique = helpers.uniqueBy(slots, item => item && item.position);
@@ -162,7 +160,10 @@ export class Get extends BaseGetter {
         grouped[0] = [helpers.findParticipant(participants, helpers.getWinner(final))];
 
         // Rest: every loser in reverse order.
-        const losers = helpers.getLosers(participants, matches.filter(match => match.group_id === singleBracket.id));
+        const losers = helpers.getLosers(
+            participants,
+            matches.filter(match => match.group_id === singleBracket.id)
+        );
         grouped.push(...losers.reverse());
 
         if (stage.settings?.consolationFinal) {
@@ -214,7 +215,10 @@ export class Get extends BaseGetter {
         }
 
         // Rest: every loser in reverse order.
-        const losers = helpers.getLosers(participants, matches.filter(match => match.group_id === loserBracket.id));
+        const losers = helpers.getLosers(
+            participants,
+            matches.filter(match => match.group_id === loserBracket.id)
+        );
         grouped.push(...losers.reverse());
 
         return helpers.makeFinalStandings(grouped);
@@ -222,7 +226,7 @@ export class Get extends BaseGetter {
 
     /**
      * Returns only the data specific to the given stage (without the participants).
-     * 
+     *
      * @param stageId ID of the stage.
      */
     private async getStageSpecificData(stageId: number): Promise<{

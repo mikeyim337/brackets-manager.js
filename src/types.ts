@@ -1,4 +1,18 @@
-import { Group, Match, MatchGame, Participant, Round, SeedOrdering, Stage } from 'brackets-model';
+import { Group, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage, InputStage } from 'brackets-model';
+
+export type CustomContestantType = { id: number; tournament_id: number; name: string; contestantId: string; nationality: string; profileImage: string; titles: string[] };
+export type CustomSeeding = (string | number | CustomContestantType | null)[];
+
+export interface ICustomContestant {
+    contestantId: string;
+    name: string;
+    nationality: string;
+    profileImage: string;
+    titles: string[];
+}
+export interface CustomParticipant extends ICustomContestant, Participant {}
+
+export type CustomInputStage = Omit<InputStage, 'seeding'> & { seeding?: Seeding | CustomSeeding };
 
 /**
  * Type of an object implementing every ordering method.
@@ -23,7 +37,7 @@ export type IdMapping = Record<number, number>;
 /**
  * Used by the library to handle placements. Is `null` if is a BYE. Has a `null` name if it's yet to be determined.
  */
-export type ParticipantSlot = { id: number | null, position?: number } | null;
+export type ParticipantSlot = { id: number | null; position?: number } | null;
 
 /**
  * The library only handles duels. It's one participant versus another participant.
@@ -38,7 +52,7 @@ export type Side = 'opponent1' | 'opponent2';
 /**
  * The cumulated scores of the opponents in a match's child games.
  */
-export type Scores = { opponent1: number, opponent2: number };
+export type Scores = { opponent1: number; opponent2: number };
 
 /**
  * The possible levels of data to which we can update the child games count.
@@ -47,7 +61,7 @@ export type ChildCountLevel = 'stage' | 'group' | 'round' | 'match';
 
 /**
  * All the possible kinds of bracket (group level) in an elimination stage.
- * 
+ *
  * - `single_bracket` for single elimination.
  * - `winner_bracket` and `loser_bracket` for double elimination.
  * - `final_group` for both single and double elimination.
@@ -58,16 +72,16 @@ export type BracketKind = 'single_bracket' | 'winner_bracket' | 'loser_bracket' 
  * Positional information about a round.
  */
 export type RoundPositionalInfo = {
-    roundNumber: number,
-    roundCount: number,
+    roundNumber: number;
+    roundCount: number;
 };
 
 /**
  * The result of an array which was split by parity.
  */
 export interface ParitySplit<T> {
-    even: T[],
-    odd: T[],
+    even: T[];
+    odd: T[];
 }
 
 /**
@@ -81,12 +95,12 @@ type ValueToArray<T> = {
  * Data type associated to each database table.
  */
 export interface DataTypes {
-    stage: Stage,
-    group: Group,
-    round: Round,
-    match: Match,
-    match_game: MatchGame,
-    participant: Participant,
+    stage: Stage;
+    group: Group;
+    round: Round;
+    match: Match;
+    match_game: MatchGame;
+    participant: Participant | CustomParticipant;
 }
 
 /**
@@ -103,9 +117,9 @@ export type Database = ValueToArray<DataTypes>;
  * An item in the final standings of an elimination stage.
  */
 export interface FinalStandingsItem {
-    id: number,
-    name: string,
-    rank: number,
+    id: number;
+    name: string;
+    rank: number;
 }
 
 /**
@@ -115,12 +129,12 @@ export interface StandardBracketResults {
     /**
      * The list of losers for each round of the bracket.
      */
-    losers: ParticipantSlot[][],
+    losers: ParticipantSlot[][];
 
     /**
      * The winner of the bracket.
      */
-    winner: ParticipantSlot,
+    winner: ParticipantSlot;
 }
 
 /**
@@ -133,7 +147,7 @@ export interface CrudInterface {
      * @param table Where to insert.
      * @param value What to insert.
      */
-    insert<T extends Table>(table: T, value: OmitId<DataTypes[T]>): Promise<number>
+    insert<T extends Table>(table: T, value: OmitId<DataTypes[T]>): Promise<number>;
 
     /**
      * Inserts multiple values in the database.
@@ -141,14 +155,14 @@ export interface CrudInterface {
      * @param table Where to insert.
      * @param values What to insert.
      */
-    insert<T extends Table>(table: T, values: OmitId<DataTypes[T]>[]): Promise<boolean>
+    insert<T extends Table>(table: T, values: OmitId<DataTypes[T]>[]): Promise<boolean>;
 
     /**
      * Gets all data from a table in the database.
      *
      * @param table Where to get from.
      */
-    select<T extends Table>(table: T): Promise<Array<DataTypes[T]> | null>
+    select<T extends Table>(table: T): Promise<Array<DataTypes[T]> | null>;
 
     /**
      * Gets specific data from a table in the database.
@@ -156,7 +170,7 @@ export interface CrudInterface {
      * @param table Where to get from.
      * @param id What to get.
      */
-    select<T extends Table>(table: T, id: number): Promise<DataTypes[T] | null>
+    select<T extends Table>(table: T, id: number): Promise<DataTypes[T] | null>;
 
     /**
      * Gets data from a table in the database with a filter.
@@ -164,7 +178,7 @@ export interface CrudInterface {
      * @param table Where to get from.
      * @param filter An object to filter data.
      */
-    select<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<Array<DataTypes[T]> | null>
+    select<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<Array<DataTypes[T]> | null>;
 
     /**
      * Updates data in a table.
@@ -173,7 +187,7 @@ export interface CrudInterface {
      * @param id What to update.
      * @param value How to update.
      */
-    update<T extends Table>(table: T, id: number, value: DataTypes[T]): Promise<boolean>
+    update<T extends Table>(table: T, id: number, value: DataTypes[T]): Promise<boolean>;
 
     /**
      * Updates data in a table.
@@ -182,14 +196,14 @@ export interface CrudInterface {
      * @param filter An object to filter data.
      * @param value How to update.
      */
-    update<T extends Table>(table: T, filter: Partial<DataTypes[T]>, value: Partial<DataTypes[T]>): Promise<boolean>
+    update<T extends Table>(table: T, filter: Partial<DataTypes[T]>, value: Partial<DataTypes[T]>): Promise<boolean>;
 
     /**
      * Empties a table completely.
-     * 
+     *
      * @param table Where to delete everything.
      */
-    delete<T extends Table>(table: T): Promise<boolean>
+    delete<T extends Table>(table: T): Promise<boolean>;
 
     /**
      * Delete data in a table, based on a filter.
@@ -197,10 +211,10 @@ export interface CrudInterface {
      * @param table Where to delete in.
      * @param filter An object to filter data.
      */
-    delete<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<boolean>
+    delete<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<boolean>;
 }
 
 export interface Storage extends CrudInterface {
-    selectFirst<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<DataTypes[T] | null>
-    selectLast<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<DataTypes[T] | null>
+    selectFirst<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<DataTypes[T] | null>;
+    selectLast<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<DataTypes[T] | null>;
 }

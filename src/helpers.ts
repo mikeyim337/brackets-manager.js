@@ -1,20 +1,23 @@
-import {
-    GrandFinalType,
-    Match,
-    MatchGame,
-    MatchResults,
-    Participant,
-    ParticipantResult,
-    Result,
-    RoundRobinMode,
-    Seeding,
-    SeedOrdering,
-    Stage,
-    StageType,
-    Status,
-} from 'brackets-model';
+/* eslint-disable comma-dangle */
+/* eslint-disable quotes */
+import { GrandFinalType, Match, MatchGame, MatchResults, Participant, ParticipantResult, Result, RoundRobinMode, SeedOrdering, Stage, StageType, Status } from 'brackets-model';
 
-import { BracketKind, Database, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
+import {
+    BracketKind,
+    Database,
+    Duel,
+    FinalStandingsItem,
+    IdMapping,
+    Nullable,
+    OmitId,
+    ParitySplit,
+    ParticipantSlot,
+    Scores,
+    Side,
+    CustomSeeding,
+    CustomParticipant,
+    CustomContestantType,
+} from './types';
 import { ordering } from './ordering';
 
 /**
@@ -38,8 +41,7 @@ export function splitByParity<T>(array: T[]): ParitySplit<T> {
 export function makeRoundRobinMatches<T>(participants: T[], mode: RoundRobinMode = 'simple'): [T, T][][] {
     const distribution = makeRoundRobinDistribution(participants);
 
-    if (mode === 'simple')
-        return distribution;
+    if (mode === 'simple') return distribution;
 
     // Reverse rounds and their content.
     const symmetry = distribution.map(round => [...round].reverse()).reverse();
@@ -70,15 +72,9 @@ export function makeRoundRobinDistribution<T>(participants: T[]): [T, T][][] {
         for (let matchId = 0; matchId < matchPerRound; matchId++) {
             if (matchId === 0 && n % 2 === 1) continue;
 
-            const opponentsIds = [
-                (roundId - matchId - 1 + n1) % (n1 - 1),
-                matchId === 0 ? n1 - 1 : (roundId + matchId) % (n1 - 1),
-            ];
+            const opponentsIds = [(roundId - matchId - 1 + n1) % (n1 - 1), matchId === 0 ? n1 - 1 : (roundId + matchId) % (n1 - 1)];
 
-            matches.push([
-                participants[opponentsIds[0]],
-                participants[opponentsIds[1]],
-            ]);
+            matches.push([participants[opponentsIds[0]], participants[opponentsIds[1]]]);
         }
 
         rounds.push(matches);
@@ -135,8 +131,7 @@ export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
     const result: T[][] = [];
 
     for (let i = 0; i < elements.length; i++) {
-        if (i % groupSize === 0)
-            result.push([]);
+        if (i % groupSize === 0) result.push([]);
 
         result[result.length - 1].push(elements[i]);
     }
@@ -150,8 +145,8 @@ export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
  * @param seeding The seeding of the stage.
  * @param participantCount The number of participants in the stage.
  */
-export function balanceByes(seeding: Seeding, participantCount?: number): Seeding {
-    seeding = seeding.filter(v => v !== null);
+export function balanceByes(seeding: CustomSeeding, participantCount?: number): CustomSeeding {
+    seeding = (seeding as any[]).filter((v: null) => v !== null);
 
     participantCount = participantCount || getNearestPowerOfTwo(seeding.length);
 
@@ -162,7 +157,10 @@ export function balanceByes(seeding: Seeding, participantCount?: number): Seedin
 
     const nonNullCount = seeding.length;
     const nullCount = participantCount - nonNullCount;
-    const againstEachOther = seeding.slice(0, nonNullCount - nullCount).filter((_, i) => i % 2 === 0).map((_, i) => [seeding[2 * i], seeding[2 * i + 1]]);
+    const againstEachOther = (seeding as any[])
+        .slice(0, nonNullCount - nullCount)
+        .filter((_: CustomSeeding, i: number) => i % 2 === 0)
+        .map((_: CustomSeeding, i: number) => [seeding[2 * i], seeding[2 * i + 1]]);
     const againstNull = seeding.slice(nonNullCount - nullCount, nonNullCount).map(v => [v, null]);
     const flat = [...againstEachOther.flat(), ...againstNull.flat()];
 
@@ -171,9 +169,9 @@ export function balanceByes(seeding: Seeding, participantCount?: number): Seedin
 
 /**
  * Normalizes IDs in a database.
- * 
+ *
  * All IDs (and references to them) are remapped to consecutive IDs starting from 0.
- * 
+ *
  * @param data Data to normalize.
  */
 export function normalizeIds(data: Database): Database {
@@ -228,21 +226,24 @@ export function normalizeIds(data: Database): Database {
 
 /**
  * Makes a mapping between old IDs and new normalized IDs.
- * 
+ *
  * @param elements A list of elements with IDs.
  */
 export function makeNormalizedIdMapping(elements: { id: number }[]): IdMapping {
     let currentId = 0;
 
-    return elements.reduce((acc, current) => ({
-        ...acc,
-        [current.id]: currentId++,
-    }), {}) as IdMapping;
+    return elements.reduce(
+        (acc, current) => ({
+            ...acc,
+            [current.id]: currentId++,
+        }),
+        {}
+    ) as IdMapping;
 }
 
 /**
  * Apply a normalizing mapping to a participant.
- * 
+ *
  * @param participant The participant.
  * @param mapping The mapping of IDs.
  */
@@ -273,7 +274,7 @@ export function setArraySize<T>(array: T[], length: number, placeholder: T): T[]
  * @param array A list of elements.
  */
 export function makePairs<T>(array: T[]): [T, T][] {
-    return array.map((_, i) => (i % 2 === 0) ? [array[i], array[i + 1]] : []).filter((v): v is [T, T] => v.length === 2);
+    return array.map((_, i) => (i % 2 === 0 ? [array[i], array[i + 1]] : [])).filter((v): v is [T, T] => v.length === 2);
 }
 
 /**
@@ -282,21 +283,19 @@ export function makePairs<T>(array: T[]): [T, T][] {
  * @param array A list of elements.
  */
 export function ensureEvenSized<T>(array: T[]): void {
-    if (array.length % 2 === 1)
-        throw Error('Array size must be even.');
+    if (array.length % 2 === 1) throw Error('Array size must be even.');
 }
 
 /**
  * Ensures there are no duplicates in a list of elements.
- * 
+ *
  * @param array A list of elements.
  */
 export function ensureNoDuplicates<T>(array: Nullable<T>[]): void {
     const nonNull = getNonNull(array);
     const unique = [...new Set(nonNull)];
 
-    if (unique.length < nonNull.length)
-        throw new Error('The seeding has a duplicate participant.');
+    if (unique.length < nonNull.length) throw new Error('The seeding has a duplicate participant.');
 }
 
 /**
@@ -306,8 +305,7 @@ export function ensureNoDuplicates<T>(array: Nullable<T>[]): void {
  * @param right The second list of elements.
  */
 export function ensureEquallySized<T>(left: T[], right: T[]): void {
-    if (left.length !== right.length)
-        throw Error('Arrays\' size must be equal.');
+    if (left.length !== right.length) throw Error("Arrays' size must be equal.");
 }
 
 /**
@@ -316,12 +314,10 @@ export function ensureEquallySized<T>(left: T[], right: T[]): void {
  * @param seeding The seeding of the stage.
  * @param participantCount The number of participants in the stage.
  */
-export function fixSeeding(seeding: Seeding, participantCount: number): Seeding {
-    if (seeding.length > participantCount)
-        throw Error('The seeding has more participants than the size of the stage.');
+export function fixSeeding(seeding: CustomSeeding, participantCount: number): CustomSeeding {
+    if (seeding.length > participantCount) throw Error('The seeding has more participants than the size of the stage.');
 
-    if (seeding.length < participantCount)
-        return setArraySize(seeding, participantCount, null);
+    if (seeding.length < participantCount) return setArraySize(seeding, participantCount, null);
 
     return seeding;
 }
@@ -332,14 +328,11 @@ export function fixSeeding(seeding: Seeding, participantCount: number): Seeding 
  * @param participantCount The number to test.
  */
 export function ensureValidSize(participantCount: number): void {
-    if (participantCount === 0)
-        throw Error('Impossible to create an empty stage. If you want an empty seeding, just set the size of the stage.');
+    if (participantCount === 0) throw Error('Impossible to create an empty stage. If you want an empty seeding, just set the size of the stage.');
 
-    if (participantCount < 2)
-        throw Error('Impossible to create a stage with less than 2 participants.');
+    if (participantCount < 2) throw Error('Impossible to create a stage with less than 2 participants.');
 
-    if (!Number.isInteger(Math.log2(participantCount)))
-        throw Error('The library only supports a participant count which is a power of two.');
+    if (!Number.isInteger(Math.log2(participantCount))) throw Error('The library only supports a participant count which is a power of two.');
 }
 
 /**
@@ -348,13 +341,12 @@ export function ensureValidSize(participantCount: number): void {
  * @param scores Two numbers which are scores.
  */
 export function ensureNotTied(scores: [number, number]): void {
-    if (scores[0] === scores[1])
-        throw Error(`${scores[0]} and ${scores[1]} are tied. It cannot be.`);
+    if (scores[0] === scores[1]) throw Error(`${scores[0]} and ${scores[1]} are tied. It cannot be.`);
 }
 
 /**
  * Converts a TBD to a BYE.
- * 
+ *
  * @param slot The slot to convert.
  */
 export function convertTBDtoBYE(slot: ParticipantSlot): ParticipantSlot {
@@ -370,9 +362,11 @@ export function convertTBDtoBYE(slot: ParticipantSlot): ParticipantSlot {
  * @param slot A participant slot.
  */
 export function toResult(slot: ParticipantSlot): ParticipantSlot {
-    return slot && {
-        id: slot.id,
-    };
+    return (
+        slot && {
+            id: slot.id,
+        }
+    );
 }
 
 /**
@@ -381,10 +375,12 @@ export function toResult(slot: ParticipantSlot): ParticipantSlot {
  * @param slot A participant slot.
  */
 export function toResultWithPosition(slot: ParticipantSlot): ParticipantSlot {
-    return slot && {
-        id: slot.id,
-        position: slot.position,
-    };
+    return (
+        slot && {
+            id: slot.id,
+            position: slot.position,
+        }
+    );
 }
 
 /**
@@ -415,13 +411,16 @@ export function getLoser(match: MatchResults): ParticipantSlot {
  * @param opponents Two opponents.
  */
 export function byeWinner(opponents: Duel): ParticipantSlot {
-    if (opponents[0] === null && opponents[1] === null) // Double BYE.
+    if (opponents[0] === null && opponents[1] === null)
+        // Double BYE.
         return null; // BYE.
 
-    if (opponents[0] === null && opponents[1] !== null) // opponent1 BYE.
+    if (opponents[0] === null && opponents[1] !== null)
+        // opponent1 BYE.
         return { id: opponents[1]!.id }; // opponent2.
 
-    if (opponents[0] !== null && opponents[1] === null) // opponent2 BYE.
+    if (opponents[0] !== null && opponents[1] === null)
+        // opponent2 BYE.
         return { id: opponents[0]!.id }; // opponent1.
 
     return { id: null }; // Normal.
@@ -447,7 +446,8 @@ export function byeWinnerToGrandFinal(opponents: Duel): ParticipantSlot {
  * @param index The index of the duel in the round.
  */
 export function byeLoser(opponents: Duel, index: number): ParticipantSlot {
-    if (opponents[0] === null || opponents[1] === null) // At least one BYE.
+    if (opponents[0] === null || opponents[1] === null)
+        // At least one BYE.
         return null; // BYE.
 
     return { id: null, position: index + 1 }; // Normal.
@@ -459,19 +459,15 @@ export function byeLoser(opponents: Duel, index: number): ParticipantSlot {
  * @param match A match's results.
  */
 export function getMatchResult(match: MatchResults): Side | null {
-    if (!isMatchCompleted(match))
-        return null;
+    if (!isMatchCompleted(match)) return null;
 
-    if (isMatchDrawCompleted(match))
-        return null;
+    if (isMatchDrawCompleted(match)) return null;
 
-    if (match.opponent1 === null && match.opponent2 === null)
-        return null;
+    if (match.opponent1 === null && match.opponent2 === null) return null;
 
     let winner: Side | null = null;
 
-    if (match.opponent1?.result === 'win' || match.opponent2 === null || match.opponent2.forfeit)
-        winner = 'opponent1';
+    if (match.opponent1?.result === 'win' || match.opponent2 === null || match.opponent2.forfeit) winner = 'opponent1';
 
     if (match.opponent2?.result === 'win' || match.opponent1 === null || match.opponent1.forfeit) {
         if (winner !== null) throw Error('There are two winners.');
@@ -489,11 +485,9 @@ export function getMatchResult(match: MatchResults): Side | null {
  */
 export function findPosition(matches: Match[], position: number): ParticipantSlot {
     for (const match of matches) {
-        if (match.opponent1?.position === position)
-            return match.opponent1;
+        if (match.opponent1?.position === position) return match.opponent1;
 
-        if (match.opponent2?.position === position)
-            return match.opponent2;
+        if (match.opponent2?.position === position) return match.opponent2;
     }
 
     return null;
@@ -537,7 +531,7 @@ export function isMatchCompleted(match: Partial<MatchResults>): boolean {
 
 /**
  * Checks if a match is completed because of a forfeit.
- * 
+ *
  * @param match Partial match results.
  */
 export function isMatchForfeitCompleted(match: Partial<MatchResults>): boolean {
@@ -546,7 +540,7 @@ export function isMatchForfeitCompleted(match: Partial<MatchResults>): boolean {
 
 /**
  * Checks if a match is completed because of a either a draw or a win.
- * 
+ *
  * @param match Partial match results.
  */
 export function isMatchResultCompleted(match: Partial<MatchResults>): boolean {
@@ -555,7 +549,7 @@ export function isMatchResultCompleted(match: Partial<MatchResults>): boolean {
 
 /**
  * Checks if a match is completed because of a draw.
- * 
+ *
  * @param match Partial match results.
  */
 export function isMatchDrawCompleted(match: Partial<MatchResults>): boolean {
@@ -564,25 +558,26 @@ export function isMatchDrawCompleted(match: Partial<MatchResults>): boolean {
 
 /**
  * Checks if a match is completed because of a win.
- * 
+ *
  * @param match Partial match results.
  */
 export function isMatchWinCompleted(match: Partial<MatchResults>): boolean {
-    return match.opponent1?.result === 'win' || match.opponent2?.result === 'win'
-        || match.opponent1?.result === 'loss' || match.opponent2?.result === 'loss';
+    return match.opponent1?.result === 'win' || match.opponent2?.result === 'win' || match.opponent1?.result === 'loss' || match.opponent2?.result === 'loss';
 }
 
 /**
  * Checks if a match is completed because of at least one BYE.
- * 
+ *
  * A match "BYE vs. TBD" isn't considered completed yet.
- * 
+ *
  * @param match Partial match results.
  */
 export function isMatchByeCompleted(match: Partial<MatchResults>): boolean {
-    return (match.opponent1 === null && match.opponent2?.id !== null) // BYE vs. someone
-        || (match.opponent2 === null && match.opponent1?.id !== null) // someone vs. BYE
-        || (match.opponent1 === null && match.opponent2 === null); // BYE vs. BYE
+    return (
+        (match.opponent1 === null && match.opponent2?.id !== null) || // BYE vs. someone
+        (match.opponent2 === null && match.opponent1?.id !== null) || // someone vs. BYE
+        (match.opponent1 === null && match.opponent2 === null)
+    ); // BYE vs. BYE
 }
 
 /**
@@ -605,7 +600,7 @@ export function isMatchParticipantLocked(match: MatchResults): boolean {
 
 /**
  * Indicates whether a match has at least one BYE or not.
- * 
+ *
  * @param match Partial match results.
  */
 export function hasBye(match: Partial<MatchResults>): boolean {
@@ -614,7 +609,7 @@ export function hasBye(match: Partial<MatchResults>): boolean {
 
 /**
  * Returns the status of a match based on the opponents of a match.
- * 
+ *
  * @param opponents The opponents of a match.
  */
 export function getMatchStatus(opponents: Duel): Status;
@@ -628,29 +623,32 @@ export function getMatchStatus(match: Partial<MatchResults>): Status;
 
 /**
  * Returns the status of a match based on information about it.
- * 
+ *
  * @param arg The opponents or partial results of the match.
  */
 export function getMatchStatus(arg: Duel | Partial<MatchResults>): Status {
-    const match = Array.isArray(arg) ? {
-        opponent1: arg[0],
-        opponent2: arg[1],
-    } : arg;
+    const match = Array.isArray(arg)
+        ? {
+              opponent1: arg[0],
+              opponent2: arg[1],
+          }
+        : arg;
 
-    if (hasBye(match)) // At least one BYE.
+    if (hasBye(match))
+        // At least one BYE.
         return Status.Locked;
 
-    if (match.opponent1?.id === null && match.opponent2?.id === null) // Two TBD opponents.
+    if (match.opponent1?.id === null && match.opponent2?.id === null)
+        // Two TBD opponents.
         return Status.Locked;
 
-    if (match.opponent1?.id === null || match.opponent2?.id === null) // One TBD opponent.
+    if (match.opponent1?.id === null || match.opponent2?.id === null)
+        // One TBD opponent.
         return Status.Waiting;
 
-    if (isMatchCompleted(match))
-        return Status.Completed;
+    if (isMatchCompleted(match)) return Status.Completed;
 
-    if (isMatchStarted(match))
-        return Status.Running;
+    if (isMatchStarted(match)) return Status.Running;
 
     return Status.Ready;
 }
@@ -662,9 +660,13 @@ export function getMatchStatus(arg: Duel | Partial<MatchResults>): Status {
  * @param match Input of the update.
  * @param inRoundRobin Indicates whether the match is in a round-robin stage.
  */
-export function setMatchResults(stored: MatchResults, match: Partial<MatchResults>, inRoundRobin: boolean): {
-    statusChanged: boolean,
-    resultChanged: boolean,
+export function setMatchResults(
+    stored: MatchResults,
+    match: Partial<MatchResults>,
+    inRoundRobin: boolean
+): {
+    statusChanged: boolean;
+    resultChanged: boolean;
 } {
     const completed = isMatchCompleted(match);
     const currentlyCompleted = isMatchCompleted(stored);
@@ -730,15 +732,14 @@ export function getOpponentId(match: MatchResults, side: Side): number | null {
  */
 export function getOriginPosition(match: Match, side: Side): number {
     const matchNumber = match[side]?.position;
-    if (matchNumber === undefined)
-        throw Error('Position is undefined.');
+    if (matchNumber === undefined) throw Error('Position is undefined.');
 
     return matchNumber;
 }
 
 /**
  * Returns every loser in a list of matches.
- * 
+ *
  * @param participants The list of participants.
  * @param matches A list of matches to get losers of.
  */
@@ -756,8 +757,7 @@ export function getLosers(participants: Participant[], matches: Match[]): Partic
         }
 
         const loser = getLoser(match);
-        if (loser === null)
-            continue;
+        if (loser === null) continue;
 
         losers[roundIndex].push(findParticipant(participants, loser));
     }
@@ -767,7 +767,7 @@ export function getLosers(participants: Participant[], matches: Match[]): Partic
 
 /**
  * Makes final standings based on participants grouped by ranking.
- * 
+ *
  * @param grouped A list of participants grouped by ranking.
  */
 export function makeFinalStandings(grouped: Participant[][]): FinalStandingsItem[] {
@@ -791,19 +791,17 @@ export function makeFinalStandings(grouped: Participant[][]): FinalStandingsItem
 
 /**
  * Returns the decisive match of a Grand Final.
- * 
+ *
  * @param type The type of Grand Final.
  * @param matches The matches in the Grand Final.
  */
 export function getGrandFinalDecisiveMatch(type: GrandFinalType, matches: Match[]): Match {
-    if (type === 'simple')
-        return matches[0];
+    if (type === 'simple') return matches[0];
 
     if (type === 'double') {
         const result = getMatchResult(matches[0]);
 
-        if (result === 'opponent2')
-            return matches[1];
+        if (result === 'opponent2') return matches[1];
 
         return matches[0];
     }
@@ -813,7 +811,7 @@ export function getGrandFinalDecisiveMatch(type: GrandFinalType, matches: Match[
 
 /**
  * Finds a participant in a list.
- * 
+ *
  * @param participants The list of participants.
  * @param slot The slot of the participant to find.
  */
@@ -833,12 +831,10 @@ export function findParticipant(participants: Participant[], slot: ParticipantSl
  */
 export function getNextSide(matchNumber: number, roundNumber: number, roundCount: number, matchLocation: BracketKind): Side {
     // The nextSide comes from the same bracket.
-    if (matchLocation === 'loser_bracket' && roundNumber % 2 === 1)
-        return 'opponent2';
+    if (matchLocation === 'loser_bracket' && roundNumber % 2 === 1) return 'opponent2';
 
     // The nextSide comes from the loser bracket to the final group.
-    if (matchLocation === 'loser_bracket' && roundNumber === roundCount)
-        return 'opponent2';
+    if (matchLocation === 'loser_bracket' && roundNumber === roundCount) return 'opponent2';
 
     return getSide(matchNumber);
 }
@@ -852,12 +848,10 @@ export function getNextSide(matchNumber: number, roundNumber: number, roundCount
  */
 export function getNextSideLoserBracket(matchNumber: number, nextMatch: Match, roundNumber: number): Side {
     // The nextSide comes from the WB.
-    if (roundNumber > 1)
-        return 'opponent1';
+    if (roundNumber > 1) return 'opponent1';
 
-    // The nextSide comes from the WB round 1. 
-    if (nextMatch.opponent1?.position === matchNumber)
-        return 'opponent1';
+    // The nextSide comes from the WB round 1.
+    if (nextMatch.opponent1?.position === matchNumber) return 'opponent1';
 
     return 'opponent2';
 }
@@ -873,7 +867,8 @@ export type SetNextOpponent = (nextMatch: Match, nextSide: Side, match?: Match, 
  * @param currentSide The side the opponent is currently on.
  */
 export function setNextOpponent(nextMatch: Match, nextSide: Side, match?: Match, currentSide?: Side): void {
-    nextMatch[nextSide] = match![currentSide!] && { // Keep BYE.
+    nextMatch[nextSide] = match![currentSide!] && {
+        // Keep BYE.
         id: getOpponentId(match!, currentSide!), // This implementation of SetNextOpponent always has those arguments.
         position: nextMatch[nextSide]?.position, // Keep position.
     };
@@ -888,7 +883,8 @@ export function setNextOpponent(nextMatch: Match, nextSide: Side, match?: Match,
  * @param nextSide The side the opponent will be on in the next match.
  */
 export function resetNextOpponent(nextMatch: Match, nextSide: Side): void {
-    nextMatch[nextSide] = nextMatch[nextSide] && { // Keep BYE.
+    nextMatch[nextSide] = nextMatch[nextSide] && {
+        // Keep BYE.
         id: null,
         position: nextMatch[nextSide]?.position, // Keep position.
     };
@@ -898,7 +894,7 @@ export function resetNextOpponent(nextMatch: Match, nextSide: Side): void {
 
 /**
  * Inverts opponents if requested by the input.
- * 
+ *
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
  */
@@ -909,19 +905,16 @@ export function handleOpponentsInversion(stored: MatchResults, match: Partial<Ma
     const storedId1 = stored.opponent1?.id;
     const storedId2 = stored.opponent2?.id;
 
-    if (Number.isInteger(id1) && id1 !== storedId1 && id1 !== storedId2)
-        throw Error('The given opponent1 ID does not exist in this match.');
+    if (Number.isInteger(id1) && id1 !== storedId1 && id1 !== storedId2) throw Error('The given opponent1 ID does not exist in this match.');
 
-    if (Number.isInteger(id2) && id2 !== storedId1 && id2 !== storedId2)
-        throw Error('The given opponent2 ID does not exist in this match.');
+    if (Number.isInteger(id2) && id2 !== storedId1 && id2 !== storedId2) throw Error('The given opponent2 ID does not exist in this match.');
 
-    if (Number.isInteger(id1) && id1 === storedId2 || Number.isInteger(id2) && id2 === storedId1)
-        invertOpponents(match);
+    if ((Number.isInteger(id1) && id1 === storedId2) || (Number.isInteger(id2) && id2 === storedId1)) invertOpponents(match);
 }
 
 /**
  * Inverts `opponent1` and `opponent2` in a match.
- * 
+ *
  * @param match A match to update.
  */
 export function invertOpponents(match: Partial<MatchResults>): void {
@@ -937,17 +930,14 @@ export function invertOpponents(match: Partial<MatchResults>): void {
  */
 export function setScores(stored: MatchResults, match: Partial<MatchResults>): boolean {
     // Skip if no score update.
-    if (match.opponent1?.score === stored.opponent1?.score && match.opponent2?.score === stored.opponent2?.score)
-        return false;
+    if (match.opponent1?.score === stored.opponent1?.score && match.opponent2?.score === stored.opponent2?.score) return false;
 
     const oldStatus = stored.status;
     stored.status = Status.Running;
 
-    if (match.opponent1 && stored.opponent1)
-        stored.opponent1.score = match.opponent1.score;
+    if (match.opponent1 && stored.opponent1) stored.opponent1.score = match.opponent1.score;
 
-    if (match.opponent2 && stored.opponent2)
-        stored.opponent2.score = match.opponent2.score;
+    if (match.opponent2 && stored.opponent2) stored.opponent2.score = match.opponent2.score;
 
     return stored.status !== oldStatus;
 }
@@ -966,11 +956,9 @@ export function setCompleted(stored: MatchResults, match: Partial<MatchResults>,
     setResults(stored, match, 'loss', 'win', inRoundRobin);
     setResults(stored, match, 'draw', 'draw', inRoundRobin);
 
-    if (stored.opponent1 && !stored.opponent2)
-        stored.opponent1.result = 'win'; // Win against opponent 2 BYE.
+    if (stored.opponent1 && !stored.opponent2) stored.opponent1.result = 'win'; // Win against opponent 2 BYE.
 
-    if (!stored.opponent1 && stored.opponent2)
-        stored.opponent2.result = 'win'; // Win against opponent 1 BYE.
+    if (!stored.opponent1 && stored.opponent2) stored.opponent2.result = 'win'; // Win against opponent 1 BYE.
 
     setForfeits(stored, match);
 }
@@ -988,14 +976,11 @@ export function setCompleted(stored: MatchResults, match: Partial<MatchResults>,
  */
 export function setResults(stored: MatchResults, match: Partial<MatchResults>, check: Result, change: Result, inRoundRobin: boolean): void {
     if (match.opponent1 && match.opponent2) {
-        if (match.opponent1.result === 'win' && match.opponent2.result === 'win')
-            throw Error('There are two winners.');
+        if (match.opponent1.result === 'win' && match.opponent2.result === 'win') throw Error('There are two winners.');
 
-        if (match.opponent1.result === 'loss' && match.opponent2.result === 'loss')
-            throw Error('There are two losers.');
+        if (match.opponent1.result === 'loss' && match.opponent2.result === 'loss') throw Error('There are two losers.');
 
-        if (!inRoundRobin && match.opponent1.forfeit === true && match.opponent2.forfeit === true)
-            throw Error('There are two forfeits.');
+        if (!inRoundRobin && match.opponent1.forfeit === true && match.opponent2.forfeit === true) throw Error('There are two forfeits.');
     }
 
     if (match.opponent1?.result === check) {
@@ -1026,7 +1011,7 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>):
         if (stored.opponent1) stored.opponent1.forfeit = true;
         if (stored.opponent2) stored.opponent2.forfeit = true;
 
-        // Don't set any result (win/draw/loss) with a double forfeit 
+        // Don't set any result (win/draw/loss) with a double forfeit
         // so that it doesn't count any point in the ranking.
         return;
     }
@@ -1051,8 +1036,8 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>):
  *
  * @param seeding The seeding.
  */
-export function isSeedingWithIds(seeding: Seeding): boolean {
-    return seeding.some((value: string | number | null) => typeof value === 'number');
+export function isSeedingWithIds(seeding: CustomSeeding): boolean {
+    return seeding.some((value: string | number | CustomContestantType | null) => typeof value === 'number');
 }
 
 /**
@@ -1061,15 +1046,30 @@ export function isSeedingWithIds(seeding: Seeding): boolean {
  * @param tournamentId ID of the tournament.
  * @param seeding The seeding.
  */
-export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding): OmitId<Participant>[] {
-    const withoutByes = seeding.filter(name => name !== null) as string[];
+export function extractParticipantsFromSeeding(tournamentId: number, seeding: CustomSeeding): OmitId<CustomParticipant>[] | OmitId<Participant>[] {
+    const withoutByes = (seeding as any[]).filter((contestant: string | number | CustomParticipant) => {
+        if (contestant !== null) {
+            if (typeof contestant === 'string') return contestant;
+            else return contestant;
+        }
+    }) as string[] | number[] | CustomParticipant[];
 
-    const participants = withoutByes.map<OmitId<Participant>>(name => ({
-        tournament_id: tournamentId,
-        name,
-    }));
+    if (typeof withoutByes[0] === 'string' || typeof withoutByes[0] === 'number') {
+        const participants = withoutByes.map<OmitId<Participant>>((name: any) => ({
+            tournament_id: tournamentId,
+            name,
+        }));
 
-    return participants;
+        return participants;
+    } else {
+        const participants = withoutByes.map<OmitId<CustomParticipant>>((customParticipant: any) => ({
+            ...customParticipant,
+            tournament_id: tournamentId,
+            name: customParticipant.name,
+        }));
+
+        return participants;
+    }
 }
 
 /**
@@ -1079,7 +1079,7 @@ export function extractParticipantsFromSeeding(tournamentId: number, seeding: Se
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsNamesToDatabase(seeding: CustomSeeding, database: Participant[] | CustomParticipant[], positions?: number[]): ParticipantSlot[] {
     return mapParticipantsToDatabase('name', seeding, database, positions);
 }
 
@@ -1090,7 +1090,7 @@ export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Parti
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsIdsToDatabase(seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsIdsToDatabase(seeding: CustomSeeding, database: Participant[] | CustomParticipant[], positions?: number[]): ParticipantSlot[] {
     return mapParticipantsToDatabase('id', seeding, database, positions);
 }
 
@@ -1102,21 +1102,30 @@ export function mapParticipantsIdsToDatabase(seeding: Seeding, database: Partici
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsToDatabase(prop: keyof Participant, seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsToDatabase(
+    prop: keyof Participant | keyof CustomParticipant,
+    seeding: CustomSeeding,
+    database: Participant[] | CustomParticipant[],
+    positions?: number[]
+): ParticipantSlot[] {
     const slots = seeding.map((slot, i) => {
         if (slot === null) return null; // BYE.
-
-        const found = database.find(participant => participant[prop] === slot);
-        if (!found) throw Error(`Participant ${prop} not found in database.`);
-
-        return { id: found.id, position: i + 1 };
+        if (typeof slot === 'string' || typeof slot === 'number') {
+            const found = database.find(participant => participant[prop as keyof Participant] === slot);
+            if (!found) throw Error(`Participant ${prop} not found in database.`);
+            return { id: found.id, position: i + 1 };
+        } else {
+            const found: CustomParticipant | undefined = (database as CustomParticipant[]).find(
+                customParticipant => customParticipant[prop as keyof CustomParticipant] === slot[prop as keyof CustomParticipant]
+            );
+            if (!found) throw Error(`Custom Participant ${prop} not found in database.`);
+            return { id: found.id, position: i + 1 };
+        }
     });
 
-    if (!positions)
-        return slots;
+    if (!positions) return slots;
 
-    if (positions.length !== slots.length)
-        throw Error('Not enough seeds in at least one group of the manual ordering.');
+    if (positions.length !== slots.length) throw Error('Not enough seeds in at least one group of the manual ordering.');
 
     return positions.map(position => slots[position - 1]); // position = i + 1
 }
@@ -1133,10 +1142,10 @@ export function convertMatchesToSeeding(matches: Match[]): ParticipantSlot[] {
 
 /**
  * Converts a list of slots to an input seeding.
- * 
+ *
  * @param slots The slots to convert.
  */
-export function convertSlotsToSeeding(slots: ParticipantSlot[]): Seeding {
+export function convertSlotsToSeeding(slots: ParticipantSlot[]): CustomSeeding {
     return slots.map(slot => {
         if (slot === null || slot.id === null) return null; // BYE or TBD.
         return slot.id; // Let's return the ID instead of the name to be sure we keep the same reference.
@@ -1155,8 +1164,7 @@ export function sortSeeding(slots: ParticipantSlot[]): ParticipantSlot[] {
     // The slots are from seeding slots, thus they have a position.
     withoutByes.sort((a, b) => a!.position! - b!.position!);
 
-    if (withoutByes.length === slots.length)
-        return withoutByes;
+    if (withoutByes.length === slots.length) return withoutByes;
 
     // Same for v and position.
     const placed = Object.fromEntries(withoutByes.map(v => [v!.position! - 1, v]));
@@ -1167,7 +1175,7 @@ export function sortSeeding(slots: ParticipantSlot[]): ParticipantSlot[] {
 
 /**
  * Returns only the non null elements.
- * 
+ *
  * @param array The array to process.
  */
 export function getNonNull<T>(array: Nullable<T>[]): T[] {
@@ -1204,10 +1212,7 @@ export function transitionToMajor(previousDuels: Duel[]): Duel[] {
 
     for (let duelIndex = 0; duelIndex < currentDuelCount; duelIndex++) {
         const prevDuelId = duelIndex * 2;
-        currentDuels.push([
-            byeWinner(previousDuels[prevDuelId]),
-            byeWinner(previousDuels[prevDuelId + 1]),
-        ]);
+        currentDuels.push([byeWinner(previousDuels[prevDuelId]), byeWinner(previousDuels[prevDuelId + 1])]);
     }
 
     return currentDuels;
@@ -1227,10 +1232,7 @@ export function transitionToMinor(previousDuels: Duel[], losers: ParticipantSlot
 
     for (let duelIndex = 0; duelIndex < currentDuelCount; duelIndex++) {
         const prevDuelId = duelIndex;
-        currentDuels.push([
-            orderedLosers[prevDuelId],
-            byeWinner(previousDuels[prevDuelId]),
-        ]);
+        currentDuels.push([orderedLosers[prevDuelId], byeWinner(previousDuels[prevDuelId])]);
     }
 
     return currentDuels;
@@ -1244,8 +1246,7 @@ export function transitionToMinor(previousDuels: Duel[], losers: ParticipantSlot
  * @param inRoundRobin Indicates whether the parent match is in a round-robin stage.
  */
 export function setParentMatchCompleted(parent: Partial<MatchResults>, childCount: number, inRoundRobin: boolean): void {
-    if (parent.opponent1?.score === undefined || parent.opponent2?.score === undefined)
-        throw Error('Either opponent1, opponent2 or their scores are falsy.');
+    if (parent.opponent1?.score === undefined || parent.opponent2?.score === undefined) throw Error('Either opponent1, opponent2 or their scores are falsy.');
 
     const minToWin = minScoreToWinBestOfX(childCount);
 
@@ -1300,13 +1301,15 @@ export function getUpdatedMatchResults<T extends MatchResults>(match: T, existin
     return {
         ...existing,
         ...match,
-        ...(enableByes ? {
-            opponent1: match.opponent1 === null ? null : { ...existing.opponent1, ...match.opponent1 },
-            opponent2: match.opponent2 === null ? null : { ...existing.opponent2, ...match.opponent2 },
-        } : {
-            opponent1: match.opponent1 === null ? { id: null } : { ...existing.opponent1, ...match.opponent1 },
-            opponent2: match.opponent2 === null ? { id: null } : { ...existing.opponent2, ...match.opponent2 },
-        }),
+        ...(enableByes
+            ? {
+                  opponent1: match.opponent1 === null ? null : { ...existing.opponent1, ...match.opponent1 },
+                  opponent2: match.opponent2 === null ? null : { ...existing.opponent2, ...match.opponent2 },
+              }
+            : {
+                  opponent1: match.opponent1 === null ? { id: null } : { ...existing.opponent1, ...match.opponent1 },
+                  opponent2: match.opponent2 === null ? { id: null } : { ...existing.opponent2, ...match.opponent2 },
+              }),
     };
 }
 
@@ -1354,9 +1357,9 @@ export function getSeeds(inLoserBracket: boolean, roundNumber: number, roundCoun
 export function getSeedCount(inLoserBracket: boolean, roundNumber: number, roundCountLB: number, matchCount: number): number {
     ensureOrderingSupported(inLoserBracket, roundNumber, roundCountLB);
 
-    return roundNumber === 1 ?
-        matchCount * 2 : // Two per match for upper or lower bracket round 1.
-        matchCount; // One per match for loser bracket minor rounds.
+    return roundNumber === 1
+        ? matchCount * 2 // Two per match for upper or lower bracket round 1.
+        : matchCount; // One per match for loser bracket minor rounds.
 }
 
 /**
@@ -1367,11 +1370,9 @@ export function getSeedCount(inLoserBracket: boolean, roundNumber: number, round
  * @param roundCountLB The count of rounds in loser bracket.
  */
 export function ensureOrderingSupported(inLoserBracket: boolean, roundNumber: number, roundCountLB: number): void {
-    if (inLoserBracket && !isOrderingSupportedLoserBracket(roundNumber, roundCountLB))
-        throw Error('This round does not support ordering.');
+    if (inLoserBracket && !isOrderingSupportedLoserBracket(roundNumber, roundCountLB)) throw Error('This round does not support ordering.');
 
-    if (!inLoserBracket && !isOrderingSupportedUpperBracket(roundNumber))
-        throw Error('This round does not support ordering.');
+    if (!inLoserBracket && !isOrderingSupportedUpperBracket(roundNumber)) throw Error('This round does not support ordering.');
 }
 
 /**
@@ -1437,8 +1438,7 @@ export function findLoserMatchNumber(participantCount: number, roundNumber: numb
     const matchNumberLB = ordered.indexOf(matchNumber) + 1;
 
     // For LB round 1, the list of losers is spread over the matches 2 by 2.
-    if (roundNumber === 1)
-        return Math.ceil(matchNumberLB / 2);
+    if (roundNumber === 1) return Math.ceil(matchNumberLB / 2);
 
     return matchNumberLB;
 }
@@ -1466,8 +1466,7 @@ export function getLoserRoundLoserCount(participantCount: number, roundNumber: n
     const matchCount = getLoserRoundMatchCount(participantCount, roundNumber);
 
     // Two per match for LB round 1 (losers coming from WB round 1).
-    if (roundNumber === 1)
-        return matchCount * 2;
+    if (roundNumber === 1) return matchCount * 2;
 
     return matchCount; // One per match for LB minor rounds.
 }
@@ -1513,7 +1512,7 @@ export function getNearestPowerOfTwo(input: number): number {
 
 /**
  * Returns the minimum score a participant must have to win a Best Of X series match.
- * 
+ *
  * @param x The count of child games in the series.
  */
 export function minScoreToWinBestOfX(x: number): number {
@@ -1568,8 +1567,7 @@ export function isLoserBracket(stageType: StageType, groupNumber: number): boole
  * @param groupNumber Number of the group.
  */
 export function isFinalGroup(stageType: StageType, groupNumber: number): boolean {
-    return stageType === 'single_elimination' && groupNumber === 2 ||
-        stageType === 'double_elimination' && groupNumber === 3;
+    return (stageType === 'single_elimination' && groupNumber === 2) || (stageType === 'double_elimination' && groupNumber === 3);
 }
 
 /**
@@ -1579,14 +1577,11 @@ export function isFinalGroup(stageType: StageType, groupNumber: number): boolean
  * @param groupNumber Number of the group.
  */
 export function getMatchLocation(stageType: StageType, groupNumber: number): BracketKind {
-    if (isWinnerBracket(stageType, groupNumber))
-        return 'winner_bracket';
+    if (isWinnerBracket(stageType, groupNumber)) return 'winner_bracket';
 
-    if (isLoserBracket(stageType, groupNumber))
-        return 'loser_bracket';
+    if (isLoserBracket(stageType, groupNumber)) return 'loser_bracket';
 
-    if (isFinalGroup(stageType, groupNumber))
-        return 'final_group';
+    if (isFinalGroup(stageType, groupNumber)) return 'final_group';
 
     return 'single_bracket';
 }
