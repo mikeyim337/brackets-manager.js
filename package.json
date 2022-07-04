@@ -1,6 +1,6 @@
 {
-    "name": "brackets-manager",
-    "version": "1.4.4",
+    "name": "@unitetheculture/brackets-manager",
+    "version": "1.0.0",
     "description": "A simple library to manage tournament brackets (round-robin, single elimination, double elimination)",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -35,7 +35,8 @@
         "start": "tsc --watch",
         "build": "tsc",
         "prepare": "npm run build",
-        "prepublishOnly": "npm run build"
+        "prepublishOnly": "npm run build",
+        "pub": "npm version patch && npm run build && npm publish"
     },
     "keywords": [
         "javascript",
